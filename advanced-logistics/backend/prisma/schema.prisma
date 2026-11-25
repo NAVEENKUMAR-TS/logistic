@@ -1,0 +1,102 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ratings   Rating[]
+
+  @@map("users")
+}
+
+model Item {
+  id        String   @id @default(uuid())
+  title     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ratings   Rating[]
+
+  @@map("items")
+}
+
+model Rating {
+  id        String   @id @default(uuid())
+  userId    String
+  itemId    String
+  score     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId])
+  @@index([itemId])
+  @@map("ratings")
+}
+
+model Warehouse {
+  id        String             @id @default(uuid())
+  code      String             @unique
+  name      String
+  location  String?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  stock     InventoryBalance[]
+  movements InventoryMovement[]
+
+  @@map("warehouses")
+}
+
+model InventoryProduct {
+  id             String             @id @default(uuid())
+  sku            String             @unique
+  name           String
+  unit           String             @default("unit")
+  reorderLevel   Int                @default(0)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  stock          InventoryBalance[]
+  movements      InventoryMovement[]
+
+  @@map("inventory_products")
+}
+
+model InventoryBalance {
+  id          String           @id @default(uuid())
+  warehouseId String
+  productId   String
+  quantity    Int              @default(0)
+  updatedAt   DateTime         @updatedAt
+  warehouse   Warehouse        @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  product     InventoryProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([warehouseId, productId])
+  @@index([productId])
+  @@map("inventory_balances")
+}
+
+model InventoryMovement {
+  id             String           @id @default(uuid())
+  warehouseId    String
+  productId      String
+  quantityChange Int
+  note           String?
+  createdAt      DateTime         @default(now())
+  warehouse      Warehouse        @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  product        InventoryProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([warehouseId, createdAt])
+  @@index([productId, createdAt])
+  @@map("inventory_movements")
+}
